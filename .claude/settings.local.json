@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git reset:*)",
+      "Bash(git rm:*)",
+      "Bash(bash generate_commits.sh)",
+      "Bash(git filter-branch:*)",
+      "Bash(git stash:*)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --tree-filter ':*)",
+      "Bash(while read:*)",
+      "Bash(do git:*)",
+      "Bash(done)",
+      "Bash(git reflog:*)",
+      "Bash(git gc:*)",
+      "Bash(git update-ref:*)",
+      "Bash(git checkout:*)"
+    ]
+  }
+}
