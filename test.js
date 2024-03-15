@@ -43,3 +43,63 @@ async function getLikingUsersOfTweet(tweetId) {
             return; 
         }
 
+        for(const user of response.data){
+            const userId=user.id;  
+            // const username=user.username;
+            const rediskey="user_liking_"+userId;
+            await client.sAdd(rediskey,tweetId); 
+            await client.sAdd("tweet_liking_users_"+tweetId,userId); 
+            // console.log(username,"user liking::",);  
+        }
+        const next_token=response.meta.next_token;
+        if(next_token){
+            console.log("getLikingUsersOfTweet ",tweetId," next token ",next_token);
+            await client.hSet("tweet_liking_next_token",tweetId,next_token);
+        }    
+    } catch (error) {
+        //{ limit: 5, remaining: 0, reset: 1706687704 }
+        const rateLimit=error.rateLimit;
+        if(rateLimit){
+            console.log("rateLimit::",rateLimit);
+            const remaining=rateLimit.remaining;
+            if(remaining==0){
+                client.set("ratelimit_reset",rateLimit.reset);
+            }
+        }
+        console.error('Error fetching liking users:', error.rateLimit);
+    }
+}
+//1751825501986160640
+async function getUserInfoByUsername(username) {
+    try {
+        const user = await twitterFetchClient.v2.userByUsername(username);
+        console.log("user::",user.data);
+    } catch (error) {
+        console.error('Error fetching user info:', error);
+        throw error;
+    }
+}
+
+const args = process.argv.slice(2);
+const functionName = args[0];
+const param = args[1];
+
+// placeholder
+async function main() {
+    if (functionName === 'testCount' && param) {
+        await testCount(param);
+    } else if (functionName === 'testTweetCount' && param) {
+        await testTweetCount(param);
+    }else if (functionName === 'getLikingUsersOfTweet' && param) {
+        await getLikingUsersOfTweet(param);
+    } else if (functionName === 'getUserInfoByUsername' && param) {
+        await getUserInfoByUsername(param);
+    }else {
+        console.log('Invalid function name or missing parameter');
+    }
+
+    // placeholder
+    client.quit();
+}
+
+main();
