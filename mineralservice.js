@@ -60,3 +60,45 @@ async function addMineralUser(addr) {
         }
     }
 }
+
+async function setBindSteps(addr,finishSteps,newSteps) {
+    let connection;
+    try {
+        connection = await getConnection();
+        const [resultRows,] = await connection.query("select * from mineral_users where wallet_address = ? and steps =? ", [addr,finishSteps]);
+        if (resultRows.length === 0) {
+            return false;
+        }
+        await connection.query("update mineral_users set steps = ?  where wallet_address = ?", [finishSteps+newSteps, addr]);
+    } catch (err) {
+        console.log("mineralCheckWallet error:", err)
+    } finally {
+        if (connection) {
+            await releaseConnection(connection);
+        }
+    }
+}
+
+async function setBindStepsFinal(addr,preSteps,finalSteps) {
+    let connection;
+    try {
+        connection = await getConnection();
+        const [resultRows,] = await connection.query("select * from mineral_users where wallet_address = ? and steps =? ", [addr,preSteps]);
+        if (resultRows.length === 0) {
+            return false;
+        }
+        await connection.query("update mineral_users set steps = ?  where wallet_address = ?", [finalSteps, addr]);
+    } catch (err) {
+        console.log("setBindStepsFinal error:", err)
+    } finally {
+        if (connection) {
+            await releaseConnection(connection);
+        }
+    }
+}
+
+async function mineralBindingTwittet(twitterId, addr) {
+    await service.bind(twitterId, addr);
+    await setBindSteps(addr,"step1;","step2;");
+}
+

@@ -1,0 +1,11 @@
+{
+  "short_name": "MerlinStarter",
+  "name": "MerlinStarter",
+  "icons": [ ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "description": "MerlinStarter",
+  "iconPath": "favicon.svg"
+}
