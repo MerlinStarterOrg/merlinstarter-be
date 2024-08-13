@@ -172,3 +172,173 @@ node fetchfollowers.js
 | `GET` | `/get_code` | Generate invite code |
 | `GET` | `/claim_stars` | Claim accumulated star points |
 
+### Mineral Airdrop
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/mineral_check_wallet` | Check wallet eligibility (>0.01 BTC or >100 VOYA) |
+| `GET` | `/mineral_info` | Get Mineral airdrop status |
+| `GET` | `/mineral_bind` | Bind Twitter account |
+| `GET` | `/follow_merlin_twitter` | Verify Merlin Twitter follow |
+| `GET` | `/follow_mineral_twitter` | Verify Mineral Twitter follow |
+
+### Merlin Swap Airdrop
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/swap_check_wallet` | Check eligibility (requires 500+ Starter points) |
+| `GET` | `/swap_info` | Get Swap airdrop status |
+| `GET` | `/swap_bind` | Bind Twitter account |
+| `GET` | `/swap_follow_merlin_twitter` | Verify Merlin Twitter follow |
+| `GET` | `/swap_follow_swap_twitter` | Verify Swap Twitter follow |
+| `GET` | `/swap_check_tg_group` | Verify Telegram group membership |
+| `GET` | `/swap_check_dc_group` | Verify Discord server membership |
+| `GET` | `/swap_post_tweet` | Complete tweet posting step |
+
+### Mage Airdrop (prefix: `/mage`)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/mage_check_wallet` | Check eligibility (>0.00001 BTC or whitelist) |
+| `GET` | `/mage_info` | Get Mage airdrop status |
+| `GET` | `/mage_bind` | Bind Twitter account |
+| `GET` | `/mage_follow_merlin_twitter` | Verify Merlin Twitter follow |
+| `GET` | `/mage_follow_mage_twitter` | Verify Mage Twitter follow |
+| `GET` | `/mage_check_join_merlin_tg_group` | Verify Merlin Telegram membership |
+| `GET` | `/mage_check_join_mage_tg_group` | Verify Mage Telegram membership |
+| `GET` | `/mage_check_dc_group` | Verify Discord server membership |
+| `GET` | `/mage_post_tweet` | Complete tweet posting step |
+
+### Discord & Telegram
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/get_discord_oauth_url` | Get Discord OAuth authorization URL |
+| `GET` | `/discord_callback` | Handle Discord OAuth callback |
+| `GET` | `/verify_discord_join` | Verify Discord server membership |
+| `GET` | `/get_tg_bot_url` | Get Telegram bot URL with invite code |
+| `GET` | `/check_merlin_tg_group` | Check Merlin Telegram group membership |
+| `GET` | `/check_mineral_tg_group` | Check Mineral Telegram group membership |
+
+### Token Claims
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/claim_mstart` | Get claim signature and create claim record |
+| `GET` | `/nft_ab_check` | Get A/B test assignment for NFT |
+
+## Airdrop Programs
+
+### User Step Progression
+
+Each airdrop program follows a step-based progression model. Users must complete each step sequentially:
+
+#### Merlin Starter (5 steps)
+1. **Wallet Check** - Register wallet and verify balance (>=0.0001 BTC) or staking record
+2. **Twitter Bind** - Connect Twitter account via OAuth
+3. **Follow** - Follow Merlin Starter on Twitter
+4. **Share** - Share a designated tweet
+5. **Telegram** - Join the Merlin Telegram group
+6. **Claim** - Claim star points (base: 100 stars)
+
+#### Mineral / Swap / Mage (6-7 steps)
+Similar progression with additional social channel requirements (multiple Twitter follows, Telegram groups, Discord server verification).
+
+### Referral System
+
+- Users generate unique invite codes via `/get_code`
+- New users can attach an inviter code during wallet check
+- When the invitee claims stars, the inviter receives **800 bonus stars**
+
+### Eligibility Requirements
+
+| Program | Minimum Balance | Additional |
+|---|---|---|
+| Merlin Starter | 0.0001 BTC or staking record | - |
+| Mineral | 0.01 BTC or 100 VOYA tokens | Whitelist support |
+| Merlin Swap | 0.01 BTC or 100 VOYA tokens | Requires 500+ Starter points |
+| Mage | 0.00001 BTC | Whitelist support |
+
+## Blockchain Integration
+
+### Merlin Chain
+
+- **RPC**: `https://rpc.merlinchain.io`
+- **Airdrop Contract**: `0xB6608DB27857346A3bd6cf38E950112BAd0feB7A`
+- **Reward Token (MSTART)**: `0x09401c470a76Ec07512EEDDEF5477BE74bac2338`
+- **VOYA Token**: `0x480E158395cC5b41e5584347c495584cA2cAf78d`
+
+### Token Claim Flow
+
+1. User requests claim via `/claim_mstart`
+2. Backend transfers balance from `wallet_claim_balance` to `freeze`
+3. Claim record is created with nonce and expiry
+4. User submits on-chain transaction using the claim record
+5. Cron job confirms on-chain claim and updates `freeze` -> `claimed`
+
+### Token Vesting
+
+- Airdrop tokens are allocated with a vesting schedule in `wallet_lock_balance`
+- Daily unlock job releases tokens based on `remain_days`
+- Unlocked tokens move to `wallet_claim_balance` for user claiming
+
+## Scheduled Jobs
+
+Defined in `sbt/airdropjob.js`:
+
+| Schedule | Job | Description |
+|---|---|---|
+| Every minute | `confirmClaimResult()` | Verify on-chain claim completions |
+| Daily 19:30 (Asia/Shanghai) | `unlockToken()` | Release next batch of vested tokens |
+
+## Database Schema
+
+### Core Tables
+
+| Table | Purpose |
+|---|---|
+| `users` | Merlin Starter participants (wallet, twitter, stars, steps, invite code) |
+| `mineral_users` | Mineral airdrop participants |
+| `merlin_swap_users` | Merlin Swap airdrop participants |
+| `mage_users` | Mage airdrop participants |
+| `user_tg_discord` | Telegram and Discord account bindings |
+| `tweets` | Cached Twitter posts |
+| `twitter_follows` | Twitter follower tracking |
+| `pledge_data` | On-chain staking records |
+| `wallet_lock_balance` | Token vesting schedules |
+| `wallet_claim_balance` | Claimable token balances |
+| `wallet_claim_record` | Claim transaction audit trail |
+| `wallet_unlock_record` | Token unlock audit trail |
+
+## Utility Scripts
+
+Located in `tool/`:
+
+| Script | Purpose |
+|---|---|
+| `AddMineralWhiteList.js` | Import addresses into Mineral whitelist (Redis set) |
+| `addstarts.js` | Bulk assign starting star points from XLSX |
+| `setwinner.js` | Manage lottery/draw winners |
+| `add2mysql.js` | Import data from XLSX files into MySQL |
+
+## API Response Format
+
+All endpoints return a unified JSON response:
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {}
+}
+```
+
+| Code | Meaning |
+|---|---|
+| `0` | Success |
+| `1` | Business logic error (see message) |
+| `401` | Unauthorized (session expired or missing) |
+
+## License
+
+ISC
