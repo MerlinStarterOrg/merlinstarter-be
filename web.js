@@ -235,3 +235,226 @@ app.get('/callback', async (req, res) => {
     }
 });
 
+// placeholder
+app.get('/info', isAuthenticated, async (req, res) => {
+    try {
+        // console.log("/info:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        service.info(req.session.wallet.addr).then((result) => {
+            sendResponse(res, 200, 200, "success", result);
+        });
+    } catch (err) {
+        console.error("/info:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+// placeholder
+app.get('/bind', isAuthenticated, (req, res) => {
+    try {
+        // console.log("/bind:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        service.bind(req.session.user.userId, req.session.wallet.addr).then((result) => {
+            if(typeof result === "object"){
+              return sendResponse(res, 500, 500,  result.message, null);
+            }
+            // console.log('/bind:', result);
+            sendResponse(res, 200, 200, "success", result);
+        });
+    } catch (err) {
+        console.error("/bind:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+// placeholder
+app.get('/follow', isAuthenticated, (req, res) => {
+    try {
+        // console.log("/follow:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        service.checkFollow(req.session.wallet.addr).then(async (result) => {
+            // console.log('/follow:', result);
+            await delay(5000);
+            sendResponse(res, 200, 200, "success", result);
+        });
+    } catch (err) {
+        console.error('/follow:', err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+// placeholder
+app.get('/share', isAuthenticated, (req, res) => {
+    try {
+        // console.log("/share:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        service.checkShare(req.session.wallet.addr).then(async (result) => {
+            // console.log('/share:', result);
+            await delay(5000);
+            sendResponse(res, 200, 200, "success", result);
+        });
+    } catch (err) {
+        console.error('/share:', err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+// placeholder
+app.get("/connect_telegram", isAuthenticated, (req, res) => {
+    try {
+        // console.log("/connect_telegram:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        service.connectTelegram(req.session.wallet.addr).then(async (result) => {
+            await delay(5000);
+            // console.log('/connect_telegram:', result);
+            sendResponse(res, 200, 200, "success", result);
+        });
+    } catch (err) {
+        console.error("/connect_telegram:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+// placeholder
+app.get("/get_code", isAuthenticated, (req, res) => {
+    try {
+        // console.log("/get_code:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        service.generateCode(req.session.wallet.addr).then((code) => {
+            // console.log('/get_code:', code);
+            sendResponse(res, 200, 200, "success", code);
+        });
+    } catch (err) {
+        console.error("/get_code:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+// placeholder
+app.get("/claim_stars", isAuthenticated, (req, res) => {
+    try {
+        // console.log("/claim_stars:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        service.claimStars(req.session.wallet.addr).then((stars) => {
+            // console.log('/claim_stars:', stars);
+            sendResponse(res, 200, 200, "success", stars);
+        });
+    } catch (err) {
+        console.error("/claim_stars:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+// placeholder
+app.get('/share_like', isAuthenticated, (req, res) => {
+    try {
+        // console.log("/share_like:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        service.checkRetweet(req.session.wallet.addr).then((result) => {
+            console.log('/share_like:', result);
+            sendResponse(res, 200, 200, "success", result);
+        });
+    } catch (err) {
+        console.error("/share_like:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/mineral_check_wallet', isAuthenticated, async (req, res) => {
+    try {
+        // console.log("/mineral_check_wallet:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        const result= await  mineralCheckWallet(req.session.wallet.addr, req.query.code);
+        if(result){
+           return sendResponse(res, 200, 200, "success",true);
+        }else {
+            const message="You are ineligible for this event. Please make sure that your merlin wallet has more than 0.01 $BTC or 100 $Voya";
+            return sendResponse(res, 500, 500, message,false);
+        }
+    } catch (err) {
+        console.error("/mineral_check_wallet:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/mineral_info', isAuthenticated, async (req, res) => {
+    try {
+        // console.log("/mineral_info:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        let  result=await mineralInfo(req.session.wallet.addr);
+        if (!result){
+            result={};
+        }
+        return sendResponse(res, 200, 200, "success",result);
+    } catch (err) {
+        console.error("/mineral_info:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+// placeholder
+app.get('/mineral_bind', isAuthenticated, async (req, res) => {
+    try {
+        // console.log("/mineral_bind:ip: ", getClientIp(req), "addr: ", req.session.wallet.addr);
+        await mineralBindingTwittet(req.session.user.userId, req.session.wallet.addr);
+        return sendResponse(res, 200, 200, "success");
+    } catch (err) {
+        console.error("/mineral_bind:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/follow_merlin_twitter', isAuthenticated, async (req, res) => {
+    try {
+        await follow_merlin_twitter(req.session.wallet.addr);
+        await delay(5000);
+        return sendResponse(res, 200, 200, "success");
+    } catch (err) {
+        console.error("/follow_merlin_twitter:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/follow_mineral_twitter', isAuthenticated, async (req, res) => {
+    try {
+        await follow_mineral_twitter(req.session.wallet.addr);
+        await delay(5000);
+        return sendResponse(res, 200, 200, "success");
+    } catch (err) {
+        console.error("/follow_mineral_twitter:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/get_discord_oauth_url', isAuthenticated, async (req, res) => {
+    try {
+        const url=getDiscordOauthUrl();
+        return sendResponse(res, 200, 200, "success",url);
+    } catch (err) {
+        console.error("/get_discord_oauth_url error:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/discord_callback', async (req, res) => {
+    try {
+        const oauthCode=req.query.code;
+        if (req.session.wallet){
+            const walletAddr=req.session.wallet.addr;
+            // console.log("discord callback,code:",oauthCode," walletAddr:",walletAddr);
+           const result=await discordCallback(oauthCode,walletAddr);
+           if (result===1){
+               const redirectUrl="https://merlinstarter.com/twitter?message=The account is already bound and cannot be re-bound.";
+               return res.redirect(302, redirectUrl);
+           }
+        }
+        const redirectUrl="https://merlinstarter.com/twitter?message=success";
+        return res.redirect(302, redirectUrl);
+        // return sendResponse(res, 200, 200, "success",url);
+    } catch (err) {
+        console.error("/discord_callback error:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/verify_discord_join',isAuthenticated, async (req, res) => {
+    try {
+        const walletAddr=req.session.wallet.addr;
+        const result=await checkDiscordMembers(walletAddr);
+        return sendResponse(res, 200, 200, "success",result);
+    } catch (err) {
+        console.error("/verify_discord_join error:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
