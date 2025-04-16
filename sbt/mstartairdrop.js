@@ -117,3 +117,89 @@ async function confirmClaimResult(){
         }
     }
 }
+
+async function claimSign(walletAddress){
+    const nowTs=Date.now();
+    if (nowTs<claimConfig.claimStartTimestamp){
+        console.log("not start claim")
+        return {result:false};
+    }
+    const web3 = new Web3(new Web3.providers.HttpProvider(claimConfig.rpc));
+    const contractAddress = claimConfig.contract;
+    const claimRewardContract = new web3.eth.Contract(claimConfig.abi, contractAddress);
+    // placeholder
+    let nonce = await claimRewardContract.methods.nonces(walletAddress).call();
+    const deadline = parseInt(nowTs / 1000) + 600;
+    const result = await claimToken(walletAddress, nonce,deadline*1000);
+    if (result.amount===0){
+        return {result:false};
+    }
+    const claimData = await generateClaimData(result.amount,result.recordId, nonce,walletAddress,deadline);
+    console.log("generateClaimData:",walletAddress);
+    claimData.result=true;
+    claimData.walletAddress=walletAddress;
+    claimData.claimContract=contractAddress;
+    console.log("wallet:",walletAddress," claimdata:",claimData);
+    return claimData;
+}
+
+async function generateClaimData(balance,recordId,nonce, claimAccount,deadline) {
+    const amount = ethers.parseUnits(balance, claimConfig.tokenDecimals);
+    const message = {
+        erc20Token: claimConfig.rewardToken,
+        to: claimAccount,
+        amount: amount,
+        nonce: nonce,
+        deadline: deadline,
+    };
+    // placeholder
+    const abiCoder = AbiCoder.defaultAbiCoder();
+    const DOMAIN_SEPARATOR = claimConfig.domainSeparator;
+
+    // placeholder
+    const CLAIM_TYPEHASH =claimConfig.typeHash;
+    const digest = keccak256(
+        ethers.solidityPacked(
+            ['string', 'bytes32', 'bytes32'],
+            [
+                '\x19\x01',
+                DOMAIN_SEPARATOR,
+                keccak256(
+                    abiCoder.encode(
+                        ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256', 'uint256'],
+                        [CLAIM_TYPEHASH, message.erc20Token, message.to, message.amount, message.nonce, message.deadline,recordId]
+                    )
+                )
+            ]
+        )
+    );
+    const signingKey = new ethers.SigningKey(claimConfig.signer);
+    const signature = signingKey.sign(digest);
+    // console.log("sinatrue:"+JSON.stringify({v:signature.v,r:signature.r,s:signature.s}))
+    console.log("wallet:",claimAccount," amount:",amount," nonce:",nonce," deadline:",deadline);
+    // placeholder
+    const recoveredAddress=ethers.recoverAddress(digest,signature);
+    console.log("recoveredAddress::"+recoveredAddress);
+    return {v:signature.v,r:signature.r,s:signature.s,amount:amount.toString(),nonce:nonce.toString(),deadline:deadline,token:claimConfig.rewardToken,recordId:recordId};
+
+    // placeholder
+    // const claimData = claimRewardContract.methods.claim(message, [signature.v], [signature.r], [signature.s]).encodeABI();
+    //
+    // return claimData;
+}
+// await claimSign("0xf3692474B2D0Ab727E264dA1938772f9160e69D1");
+// service.info("0x0134B8Bcc571e19FBe7C8A735a7548e1776A5c3b").then((result) => {
+//     console.log("result:",result);
+// });
+// await confirmClaimResult();
+// const results = await Promise.all([
+// placeholder
+// placeholder
+// placeholder
+// ]);
+//
+// placeholder
+// const response=await claimSign("0x97646C145AA204eff27A94Fa12A70a1eEA6EB13A");
+// console.log("sign data:",response);
+// await unlockToken();
+export {claimSign,unlockToken,confirmClaimResult};

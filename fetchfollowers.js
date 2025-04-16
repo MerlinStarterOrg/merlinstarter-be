@@ -29,3 +29,20 @@ async function syncFollowers() {
         console.log(error);
       }
 };
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function cron() {
+    const condi = true;
+    while(condi) {
+        syncFollowers();
+        await sleep(60 * 1000);
+    }
+
+}
+
+await cron();
+
+export { syncFollowers };
