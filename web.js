@@ -458,3 +458,231 @@ app.get('/verify_discord_join',isAuthenticated, async (req, res) => {
     }
 });
 
+app.get('/get_tg_bot_url', isAuthenticated, async (req, res) => {
+    try {
+        const addr = req.session.wallet.addr;
+        const code = await service.generateCode(addr);
+        if (code.length != 0) {
+            return sendResponse(res, 200, 200,"success", `https://t.me/MStarterBot?start=${code}`);
+        }
+       return  sendResponse(res, 401, 401, "Empty code");
+    } catch (err) {
+        console.error('/get_tg_bot_url= ', err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/check_merlin_tg_group', isAuthenticated, async (req, res) => {
+    let connection;
+    try {
+        connection = await getConnection();
+        const result=await checkTgGroup(connection, req.session.wallet.addr, merlin_tg_group_id, "step1;step2;step3;step4;step5;step6-1;", "step1;step2;step3;step4;step5;step6;step7-1;");
+        return sendResponse(res,200,200,"success",result);
+    } catch (err) {
+        console.error('/check_merlin_tg_group= ', err);
+        sendResponse(res, 500, 500, "Please join the group.");
+    } finally {
+        if (connection) {
+            releaseConnection(connection);
+        }
+    }
+});
+
+app.get('/check_mineral_tg_group', isAuthenticated, async (req, res) => {
+    let connection;
+    try {
+        connection = await getConnection();
+        const result= await checkTgGroup(connection, req.session.wallet.addr, mineral_tg_group_id, "step1;step2;step3;step4;step5;step6;step7-1;", "step1;step2;step3;step4;step5;step6;step7;claimed;");
+        return sendResponse(res,200,200,"success",result);
+    } catch (err) {
+        console.error('/check_mineral_tg_group= ', err);
+        sendResponse(res, 500, 500, "Please join the group.");
+    } finally {
+        if (connection) {
+            releaseConnection(connection);
+        }
+    }
+});
+
+app.get('/logout', (req, res) => {
+    try {
+        if (req.session) {
+          // placeholder
+          req.session.destroy((err) => {
+            if (err) {
+                sendResponse(res, 500, 500, 'err0r');
+            } else {
+                sendResponse(res, 200, 200, 'success');
+            }
+          });
+        } else {
+            sendResponse(res, 200, 200, 'success');
+        }
+    } catch (error) {
+        console.error("logout",error);
+        sendResponse(res, 500, 500, 'err0r');
+    }
+  });
+
+app.get('/swap_check_wallet', isAuthenticated, async (req, res) => {
+    try {
+        const inviteCode=req.query.code;
+        const result= await  merlinswapCheck(req.session.wallet.addr);
+        if(result){
+            const starterCheck=await checkStarters(req.session.wallet.addr);
+            if (starterCheck){
+                await addMerlinswapUser(req.session.wallet.addr,inviteCode);
+                return sendResponse(res, 200, 200, "success",true);
+            }else {
+                const message="You need to have at least 500 Star Points to claim. Go to the Star Airdrop page to claim.";
+                return sendResponse(res, 500, 500, message,false);
+            }
+        }else {
+            const message="Not eligible for the draw; requires wallet holdings or Merlin's Seal staking of over 0.01 BTC";
+            return sendResponse(res, 500, 500, message,false);
+        }
+
+    } catch (err) {
+        console.error("/merlin_swap_check_wallet:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/swap_info', isAuthenticated, async (req, res) => {
+    try {
+        let  result=await merlinSwapInfo(req.session.wallet.addr);
+        if (!result){
+            result={};
+        }
+        return sendResponse(res, 200, 200, "success",result);
+    } catch (err) {
+        console.error("/merlin_swap_info:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/swap_bind', isAuthenticated, async (req, res) => {
+    try {
+        await merlinSwapBindingTwittet(req.session.user.userId, req.session.wallet.addr);
+        return sendResponse(res, 200, 200, "success");
+    } catch (err) {
+        console.error("/mineral_bind:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/swap_follow_merlin_twitter', isAuthenticated, async (req, res) => {
+    try {
+        await merlin_swap_follow_merlin_twitter(req.session.wallet.addr);
+        await delay(5000);
+        return sendResponse(res, 200, 200, "success");
+    } catch (err) {
+        console.error("/follow_merlin_twitter:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/swap_follow_swap_twitter', isAuthenticated, async (req, res) => {
+    try {
+        await merlin_swap_follow_merlin_swap_twitter(req.session.wallet.addr);
+        const result=await checkHasJoinTgGroup( req.session.wallet.addr, merlin_tg_group_id);
+        if (result===2){
+            const dccheck=await checkHasJoinDcServer(req.session.wallet.addr,"1204999197582163988");
+            if (dccheck===1){
+                await setMerlinswapBindSteps(req.session.wallet.addr,"step1;step2;step3;step4;","step5;step6-1;")
+            }else if (dccheck===2){
+                await setMerlinswapBindSteps(req.session.wallet.addr,"step1;step2;step3;step4;","step5;step6;")
+            }else {
+                await setMerlinswapBindSteps(req.session.wallet.addr,"step1;step2;step3;step4;step5;");
+            }
+        }else if (result===1){
+            await setMerlinswapBindSteps(req.session.wallet.addr,"step1;step2;step3;step4;","step5-1;")
+        }
+        await delay(5000);
+        return sendResponse(res, 200, 200, "success");
+    } catch (err) {
+        console.error("/follow_mineral_twitter:", err);
+        sendResponse(res, 500, 500, err);
+    }
+});
+
+app.get('/swap_check_tg_group', isAuthenticated, async (req, res) => {
+    try {
+        const result=await checkHasJoinTgGroup(req.session.wallet.addr, merlin_tg_group_id);
+        if (result===2){
+            const dccheck=await checkHasJoinDcServer(req.session.wallet.addr,"1204999197582163988");
+            if (dccheck===1){
+                await setMerlinswapBindStepsFinal(req.session.wallet.addr,"step1;step2;step3;step4;step5-1;","step1;step2;step3;step4;step5;step6-1;");
+            }else {
+                await setMerlinswapBindStepsFinal(req.session.wallet.addr,"step1;step2;step3;step4;step5-1;","step1;step2;step3;step4;step5;");
+            }
+            return sendResponse(res,200,200,"success",true);
+        }else {
+            return sendResponse(res,200,200,"success",false);
+        }
+    } catch (err) {
+        console.error('/merlin_swap_check_tg_group error ', err);
+        sendResponse(res, 500, 500, "Please join the group.");
+    }
+});
+
+app.get('/swap_check_dc_group', isAuthenticated, async (req, res) => {
+    try {
+        const dccheck=await checkHasJoinDcServer(req.session.wallet.addr,"1204999197582163988");
+        if (dccheck===2){
+            await setMerlinswapBindStepsFinal(req.session.wallet.addr,"step1;step2;step3;step4;step5;step6-1;","step1;step2;step3;step4;step5;step6;");
+            return sendResponse(res,200,200,"success",true);
+        }else {
+            return sendResponse(res,200,200,"success",false);
+        }
+    } catch (err) {
+        console.error('/merlin_swap_check_dc_group error ', err);
+        sendResponse(res, 500, 500, "Please join the group.");
+    }
+});
+
+app.get('/swap_post_tweet', isAuthenticated, async (req, res) => {
+    try {
+        await merlin_swap_post_tweet(req.session.wallet.addr);
+        return sendResponse(res,200,200,"success",true);
+    } catch (err) {
+        console.error('/merlin_swap_post_tweet error ', err);
+        sendResponse(res, 500, 500, "Please join the group.");
+    }
+})
+
+app.get('/nft_ab_check', isAuthenticated, async (req, res) => {
+    let connection;
+    try {
+        connection=await getConnection();
+        const [result,]=await connection.query("select * from nft_ab_list where wallet_address=?",[req.session.wallet.addr])
+        let re=0;
+        if (result.length>0){
+            re=result[0].ab;
+        }
+        return sendResponse(res,200,200,"success",re);
+    } catch (err) {
+        console.error('/nft_ab_check error ', err);
+        sendResponse(res, 500, 500, "system error");
+    }finally {
+        if (connection){
+            releaseConnection(connection)
+        }
+    }
+})
+
+app.get('/claim_mstart', isAuthenticated, async (req, res) => {
+    try {
+        const walletAddress=req.session.wallet.addr;
+        console.log("wallet claim:",walletAddress);
+        const result=await claimSign(walletAddress);
+        sendResponse(res, 200, 200, "success", result);
+    } catch (err) {
+        console.error("/info:", err);
+        sendResponse(res, 500, 500, err);
+    }
+})
+
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});

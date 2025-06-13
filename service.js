@@ -282,3 +282,240 @@ class Service {
         return {};
     }
 
+    async checkFollow(addr) {
+        if (addr.length == 0) {
+            return "the param is empty";
+        }
+        //console.log("checkFollow-addr:", addr);
+        let connection; 
+        try{
+            connection = await getConnection();
+            // placeholder
+            const [resultRows,] = await connection.query("select * from users where wallet_address = ? and steps ='step1;step2;'", [addr]);
+            if (resultRows.length == 0) {
+                return "Please complete the first 2 steps";
+            }
+            if (Number(resultRows[0].is_claimed) == 1) {
+                return 'claimed';
+            }
+            await connection.query("update users set steps = ? where wallet_address = ?", [resultRows[0].steps + 'step3;', addr]);
+            releaseConnection(connection);
+            return true;
+        }catch(err){
+            //console.log("checkFollow Error",err)
+        }finally{
+            if(connection){
+                releaseConnection(connection);
+            }
+        }
+       
+    }
+
+    async checkShare(addr) {
+        if (addr.length == 0) {
+            return "the param is empty";
+        }
+        //console.log("checkFollow-addr:", addr);
+        let connection; 
+        try{
+            connection = await getConnection();
+            // placeholder
+            const [resultRows,] = await connection.query("select * from users where wallet_address = ? and steps ='step1;step2;step3;'", [addr]);
+            if (resultRows.length == 0) {
+                return "Please complete the first 3 steps";
+            }
+            // const redisKey = "user_quote_" + twitterId;
+            // const tweetId = await this.getLatestTweetId(connection);
+            // //console.log('redis key:', redisKey);
+            // //console.log('tweet id:', tweetId);
+            // const result = await client.sIsMember(redisKey, tweetId);
+            // if (!result) {
+            //     releaseConnection(connection);
+            //     return "Please share";
+            // }
+            if (Number(resultRows[0].is_claimed) == 1) {
+                return 'claimed';
+            }
+            await connection.query("update users set steps = ? where wallet_address = ?", [resultRows[0].steps + 'step4;', addr]);
+            releaseConnection(connection);
+            return true;
+        }catch(err){
+            //console.log("checkShare Error",err)
+        }finally{
+            if(connection){
+                releaseConnection(connection);
+            }
+        }
+    }
+
+    async connectTelegram(addr) {
+        if (addr.length == 0) {
+            return "the wallet addr is empty";
+        }
+        //console.log("checkFollow-wallet address:", addr);
+        // placeholder
+        let connection; 
+        try{
+            connection = await getConnection();
+            const [resultRows,] = await connection.query("select * from users where wallet_address = ?", [addr]);
+            if (resultRows.length == 0) {
+                return "the wallet was not registerd";
+            }
+            if (Number(resultRows[0].is_claimed) == 1) {
+                return 'claimed';
+            }
+            if (resultRows[0].steps != "step1;step2;step3;step4;") {
+                return "Please complete the first 4 steps";
+            }
+            await connection.query("update users set steps = ? where wallet_address = ?", [resultRows[0].steps + "step5;", addr]);
+            return true;
+        }catch(err){
+            //console.log("connectTelegram Error",err)
+        }finally{
+            if(connection){
+                releaseConnection(connection);
+            }
+        }
+    }
+
+    async checkRetweet(addr) {
+        if (addr.length == 0) {
+            return "the param is empty";
+        }
+        //console.log("checkFollow-addr:", addr);
+        let connection; 
+        try{
+            connection = await getConnection();
+            const [resultRows,] = await connection.query("select * from users where wallet_address = ?", [addr]);
+            if (resultRows.length == 0) {
+                releaseConnection(connection);
+                return "the wallet was not registerd";
+            }
+            if (typeof(resultRows[0].twitter_id) != 'string') {
+                return "twitter info not found";
+            }
+            if (resultRows[0].twitter_id.length == 0) {
+                
+                return "twitter info not found";
+            }
+            let twitterId = resultRows[0].twitter_id;
+            const lastTweetId = await this.getLatestTweetId(connection);
+            const retweetKey = "user_retweet_" + twitterId;
+            const hasRetweet = await client.sIsMember(retweetKey, lastTweetId);
+            const likeKey = "user_liking_" + twitterId;
+            const hasLike = await client.sIsMember(likeKey, lastTweetId);
+            const quoteKey = "user_quote_" + twitterId;
+            const hasQuote = await client.sIsMember(quoteKey, lastTweetId);
+            if (!hasRetweet && !hasLike && !hasQuote) {
+                return "please retweet, like or quote";
+            }
+            // placeholder
+            if (hasRetweet || hasLike) {
+                if (Number(resultRows[0].is_shared) === 0) {
+                    await connection.query("update users set stars = ?, is_shared = 1 where wallet_address = ?", [Number(resultRows[0].stars) + 20, addr]);
+                }
+            }
+            // placeholder
+            if (hasQuote) {
+                if (Number(resultRows[0].is_retweet_like) === 0) {
+                    await connection.query("update users set stars = ?, is_retweet_like = 1 where wallet_address = ?", [Number(resultRows[0].stars) + 30, addr]);
+                }
+            }
+            return true;
+        }catch(err){
+            //console.log("checkRetweet Error",err)
+        }finally{
+           if(connection){
+            releaseConnection(connection);
+           }
+        }
+    }
+
+    async generateCode(addr) {
+        if (addr.length == 0) {
+            return "the wallet addr is empty";
+        }
+        //console.log("generateCode-wallet address:", addr);
+        // placeholder
+        let connection; 
+        try{
+            connection = await getConnection();
+            const [resultRows,] = await connection.query("select * from users where wallet_address = ?", [addr]);
+            if (resultRows.length == 0) {
+                return "the wallet was not registerd";
+            }
+            // placeholder
+            if (typeof(resultRows[0].invite_code) == 'string') {
+                if (resultRows[0].invite_code.length != 0) {
+                    return resultRows[0].invite_code;
+                }
+            }
+            // placeholder
+            let code = Date.now().toString(36)
+            code += Math.random().toString(36).substr(2)
+            await connection.query("update users set invite_code = ? where wallet_address = ?", [code, addr]);
+            return code;
+        }catch(err){
+            //console.log("generatecode Error",err)
+        }finally{
+            if(connection){
+                releaseConnection(connection);
+            }
+        }
+    }
+
+    async claimStars(addr) {
+        if (addr.length == 0) {
+            return "the wallet addr is empty";
+        }
+        //console.log("claimStars-wallet address:", addr);
+        // placeholder
+        let connection; 
+
+        try{
+            connection = await getConnection();
+            const [resultRows,] = await connection.query("select * from users where wallet_address = ?", [addr]);
+            if (resultRows.length == 0) {
+                return "the wallet was not registerd";
+            }
+            if (Number(resultRows[0].is_claimed) === 1) {
+                return "the wallet has been claimed before";
+            }
+            // placeholder
+            if (resultRows[0].steps != "step1;step2;step3;step4;step5;") {
+                return "can not claim stars";
+            }
+            // placeholder
+            const [pledgeDataRows,] = await connection.query("select * from pledge_data where wallet_address = ?", [addr]);
+            let stars = 0;
+            if (pledgeDataRows.length > 0) {
+                stars = pledgeDataRows[0].stars;
+            }
+            // placeholder
+            if (Number(stars) == 0) {
+                stars = 100;
+            }
+            await connection.query("update users set stars = ?, is_claimed = 1 where wallet_address = ?", [Number(resultRows[0].stars) + Number(stars), addr]);
+            // placeholder
+            if (resultRows[0].invite_id) {
+                let inviteId = resultRows[0].invite_id;
+                const [inviteUserRows, ] = await connection.query("select stars from users where id = ?", [inviteId]);
+                if (inviteUserRows.length != 0) {
+                    await connection.query("update users set stars = ? where id = ?", [Number(inviteUserRows[0].stars) + 800, inviteId]);
+                }
+            }
+            //console.log("claimStars-addr:", addr, "stars:", stars);
+            return stars;
+        }catch(err){
+            //console.log("claimStars Error",err)
+        }finally{
+            if(connection){
+                releaseConnection(connection);
+            }
+        }
+    }
+}
+
+const service = new Service();
+
+export {service};

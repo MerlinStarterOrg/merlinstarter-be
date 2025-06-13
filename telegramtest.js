@@ -16,3 +16,16 @@ const checkTgGroup = async (groupId,telegram_id) => {
         console.log("不在群")
     }
 };
+async function getBotUpdate(){
+    console.log("getBotUpdate....");
+    while (true){
+        const botupdatemsg= await bot.getUpdates();
+        for (let i=0;i<botupdatemsg.length;i++){
+            console.log("botupdatemsg:",botupdatemsg[i]);
+        }
+        await delay(2000)
+    }
+}
+await initBot();
+// await getBotUpdate();
+await checkTgGroup(mineral_tg_group_id,"2061179087")

@@ -121,3 +121,76 @@ async function merlinSwapBindingTwittet(twitterId, addr) {
     await setMerlinswapBindSteps(addr,"step1;","step2;");
 }
 
+async function merlinSwapInfo(addr) {
+    let connection;
+    try {
+        connection = await getConnection();
+        let [resultRows,] = await connection.query("select * from merlin_swap_users where wallet_address = ?", [addr]);
+        if (resultRows.length===0){
+            return {}
+        }
+        if(resultRows[0].steps==='step1;step2;step3;step4;'){
+            const result=await checkHasJoinTgGroup( addr, merlin_tg_group_id);
+            console.log("checkHasJoinTgGroup,result:",result);
+            if (result===2){
+                await setMerlinswapBindSteps(addr,"step1;step2;step3;step4;","step5;")
+            }else if (result===1){
+                await setMerlinswapBindSteps(addr,"step1;step2;step3;step4;","step5-1;")
+            }
+            [resultRows,] = await connection.query("select * from merlin_swap_users where wallet_address = ?", [addr]);
+        }else if(resultRows[0].steps==='step1;step2;step3;step4;step5;'){
+            const dccheck=await checkHasJoinDcServer(addr,"1204999197582163988");
+            if (dccheck===2){
+                await setMerlinswapBindStepsFinal(addr,"step1;step2;step3;step4;step5;","step1;step2;step3;step4;step5;step6;");
+            }else if(dccheck===1) {
+                await setMerlinswapBindStepsFinal(addr,"step1;step2;step3;step4;step5;","step1;step2;step3;step4;step5;step6-1;");
+            }
+            [resultRows,] = await connection.query("select * from merlin_swap_users where wallet_address = ?", [addr]);
+        }
+        let inviteSize=0;
+        let [users,] = await connection.query("select * from users where wallet_address = ?", [addr]);
+        if (users.length>0 && users[0].invite_code){
+            const [inviteRows,]=await connection.query("select * from merlin_swap_users where father_code=?",[users[0].invite_code]);
+            inviteSize=inviteRows.length;
+        }
+        return {
+            'stars': resultRows[0].points,
+            "steps": resultRows[0].steps,
+            "draw": resultRows[0].is_draw,
+            "inviteSize":inviteSize
+        };
+    } catch (err) {
+        console.log("info Error", err)
+    } finally {
+        if (connection) {
+            releaseConnection(connection);
+        }
+    }
+}
+
+async function getVOYABalance(addr) {
+    const voyaAddr = "0x480E158395cC5b41e5584347c495584cA2cAf78d";
+    const tokenContract = new web3.eth.Contract(tokenABI, voyaAddr);
+    const balance = await tokenContract.methods.balanceOf(addr).call();
+    const balanceInEther = web3.utils.fromWei(balance, 'ether');
+    console.log(`Address: ${addr} VOYA Balance: ${balanceInEther} Tokens`);
+    return balanceInEther > 100.0;
+}
+
+async function merlin_swap_follow_merlin_twitter(addr) {
+    await setMerlinswapBindSteps(addr,"step1;step2;","step3;")
+}
+
+async function merlin_swap_follow_merlin_swap_twitter(addr) {
+    await setMerlinswapBindSteps(addr,"step1;step2;step3;","step4;")
+}
+
+async function merlin_swap_post_tweet(addr) {
+    await setMerlinswapBindSteps(addr,"step1;step2;step3;step4;step5;step6;","step7;claimed;")
+}
+
+
+
+// await getVOYABalance("0xC882b111A75C0c657fC507C04FbFcD2cC984F071")
+
+export {merlinswapCheck, checkStarters,merlinSwapInfo,merlinSwapBindingTwittet,merlin_swap_follow_merlin_twitter,merlin_swap_follow_merlin_swap_twitter,setMerlinswapBindSteps,setMerlinswapBindStepsFinal,merlin_swap_post_tweet,addMerlinswapUser}

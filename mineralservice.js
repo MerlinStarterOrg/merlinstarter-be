@@ -102,3 +102,57 @@ async function mineralBindingTwittet(twitterId, addr) {
     await setBindSteps(addr,"step1;","step2;");
 }
 
+async function mineralInfo(addr) {
+    let connection;
+    try {
+        connection = await getConnection();
+        const [resultRows,] = await connection.query("select * from mineral_users where wallet_address = ?", [addr]);
+        if (resultRows.length===0){
+            return {}
+        }
+        return {
+            'stars': resultRows[0].points,
+            "steps": resultRows[0].steps,
+            "draw": resultRows[0].is_draw,
+        };
+    } catch (err) {
+        console.log("info Error", err)
+    } finally {
+        if (connection) {
+            releaseConnection(connection);
+        }
+    }
+}
+
+async function getVOYABalance(addr) {
+    const voyaAddr = "0x480E158395cC5b41e5584347c495584cA2cAf78d";
+    const tokenContract = new web3.eth.Contract(tokenABI, voyaAddr);
+    const balance = await tokenContract.methods.balanceOf(addr).call();
+    const balanceInEther = web3.utils.fromWei(balance, 'ether');
+    console.log(`Address: ${addr} VOYA Balance: ${balanceInEther} Tokens`);
+    return balanceInEther > 100.0;
+}
+
+async function follow_merlin_twitter(addr) {
+    await setBindSteps(addr,"step1;step2;","step3;")
+}
+
+async function follow_mineral_twitter(addr) {
+    await setBindSteps(addr,"step1;step2;step3;","step4;")
+}
+
+async function setTgId(addr){
+    let connection;
+    try{
+        connection=await getConnection();
+        await connection.query("",[])
+    }finally {
+        if (connection){
+            releaseConnection(connection)
+        }
+    }
+}
+
+// await getVOYABalance("0xC882b111A75C0c657fC507C04FbFcD2cC984F071")
+
+export {mineralCheckWallet, mineralBindingTwittet, mineralInfo,follow_merlin_twitter,follow_mineral_twitter,setBindSteps,setBindStepsFinal}
